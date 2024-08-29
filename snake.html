@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .geeks {
+            font-size: 40px;
+            font-weight: bold;
+            color: green;
+        }
+
+        #restartBtn {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #restartBtn:hover {
+            background-color: darkgreen;
+        }
+
+        .control-btns {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .control-btns div {
+            margin: 5px;
+        }
+
+        .control-btn {
+            padding: 15px;
+            font-size: 18px;
+            background-color: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background-color: darkgreen;
+        }
+
+        @media (max-width: 600px) {
+            .control-btn {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Snake Game with
+        <div class="geeks">MIGHTY RAJU</div>
+    </h1>
+    <canvas id="board"></canvas>
+    <br>
+    <button id="restartBtn" onclick="restartGame()">Restart</button>
+
+    <div class="control-btns">
+        <div>
+            <button class="control-btn" onclick="changeDirectionManual('ArrowUp')">Up</button>
+        </div>
+    </div>
+    <div class="control-btns">
+        <div>
+            <button class="control-btn" onclick="changeDirectionManual('ArrowLeft')">Left</button>
+        </div>
+        <div>
+            <button class="control-btn" onclick="changeDirectionManual('ArrowDown')">Down</button>
+        </div>
+        <div>
+            <button class="control-btn" onclick="changeDirectionManual('ArrowRight')">Right</button>
+        </div>
+    </div>
+
+    <script>
+        let blockSize = 25;
+        let total_row = 17; // total row number
+        let total_col = 17; // total column number
+        let board;
+        let context;
+
+        let snakeX = blockSize * 5;
+        let snakeY = blockSize * 5;
+
+        // Set the total number of rows and columns
+        let speedX = 0; // speed of snake in x coordinate
+        let speedY = 0; // speed of snake in y coordinate
+
+        let snakeBody = [];
+
+        let foodX;
+        let foodY;
+
+        let obstacles = [];
+        let numObstacles = 5;
+
+        let gameOver = false;
+
+        window.onload = function () {
+            // Set board height and width
+            board = document.getElementById("board");
+            board.height = total_row * blockSize;
+            board.width = total_col * blockSize;
+            context = board.getContext("2d");
+
+            placeFood();
+            placeObstacles();
+            document.addEventListener("keyup", changeDirection); // for movements
+            // Set snake speed
+            setInterval(update, 1000 / 7);
+        };
+
+        function update() {
+            if (gameOver) {
+                return;
+            }
+
+            // Background of the game
+            context.fillStyle = "green";
+            context.fillRect(0, 0, board.width, board.height);
+
+            // Set food color and position
+            context.fillStyle = "yellow";
+            context.fillRect(foodX, foodY, blockSize, blockSize);
+
+            // Draw obstacles
+            context.fillStyle = "red";
+            for (let i = 0; i < obstacles.length; i++) {
+                context.fillRect(obstacles[i][0], obstacles[i][1], blockSize, blockSize);
+            }
+
+            if (snakeX == foodX && snakeY == foodY) {
+                snakeBody.push([foodX, foodY]);
+                placeFood();
+            }
+
+            // Body of snake will grow
+            for (let i = snakeBody.length - 1; i > 0; i--) {
+                snakeBody[i] = snakeBody[i - 1];
+            }
+            if (snakeBody.length) {
+                snakeBody[0] = [snakeX, snakeY];
+            }
+
+            context.fillStyle = "white";
+            snakeX += speedX * blockSize; // updating snake position in x coordinate
+            snakeY += speedY * blockSize; // updating snake position in y coordinate
+            context.fillRect(snakeX, snakeY, blockSize, blockSize);
+            for (let i = 0; i < snakeBody.length; i++) {
+                context.fillRect(snakeBody[i][0], snakeBody[i][1], blockSize, blockSize);
+            }
+
+            // Check for collisions with obstacles
+            for (let i = 0; i < obstacles.length; i++) {
+                if (snakeX == obstacles[i][0] && snakeY == obstacles[i][1]) {
+                    gameOver = true;
+                    endGame();
+                }
+            }
+
+            if (snakeX < 0 || snakeX >= total_col * blockSize || snakeY < 0 || snakeY >= total_row * blockSize) {
+                // Out of bound condition
+                gameOver = true;
+                endGame();
+            }
+
+            for (let i = 0; i < snakeBody.length; i++) {
+                if (snakeX == snakeBody[i][0] && snakeY == snakeBody[i][1]) {
+                    // Snake eats own body
+                    gameOver = true;
+                    endGame();
+                }
+            }
+        }
+
+        // Movement of the snake using keyboard
+        function changeDirection(e) {
+            if (e.code == "ArrowUp" && speedY != 1) {
+                // If up arrow key pressed with this condition...
+                // snake will not move in the opposite direction
+                speedX = 0;
+                speedY = -1;
+            } else if (e.code == "ArrowDown" && speedY != -1) {
+                // If down arrow key pressed
+                speedX = 0;
+                speedY = 1;
+            } else if (e.code == "ArrowLeft" && speedX != 1) {
+                // If left arrow key pressed
+                speedX = -1;
+                speedY = 0;
+            } else if (e.code == "ArrowRight" && speedX != -1) {
+                // If right arrow key pressed
+                speedX = 1;
+                speedY = 0;
+            }
+        }
+
+        // Movement of the snake using buttons
+        function changeDirectionManual(direction) {
+            if (direction == "ArrowUp" && speedY != 1) {
+                speedX = 0;
+                speedY = -1;
+            } else if (direction == "ArrowDown" && speedY != -1) {
+                speedX = 0;
+                speedY = 1;
+            } else if (direction == "ArrowLeft" && speedX != 1) {
+                speedX = -1;
+                speedY = 0;
+            } else if (direction == "ArrowRight" && speedX != -1) {
+                speedX = 1;
+                speedY = 0;
+            }
+        }
+
+        // Randomly place food
+        function placeFood() {
+            let foodPlaced = false;
+            while (!foodPlaced) {
+                foodX = Math.floor(Math.random() * total_col) * blockSize;
+                foodY = Math.floor(Math.random() * total_row) * blockSize;
+
+                // Ensure food is not placed on an obstacle
+                let onObstacle = obstacles.some(obstacle => obstacle[0] == foodX && obstacle[1] == foodY);
+                if (!onObstacle) {
+                    foodPlaced = true;
+                }
+            }
+        }
+
+        // Randomly place obstacles
+        function placeObstacles() {
+            obstacles = [];
+            for (let i = 0; i < numObstacles; i++) {
+                let obstacleX, obstacleY;
+                let onSnakeOrFood = true;
+                while (onSnakeOrFood) {
+                    obstacleX = Math.floor(Math.random() * total_col) * blockSize;
+                    obstacleY = Math.floor(Math.random() * total_row) * blockSize;
+
+                    // Ensure obstacle is not placed on the snake or food
+                    onSnakeOrFood =
+                        (obstacleX == snakeX && obstacleY == snakeY) ||
+                        (obstacleX == foodX && obstacleY == foodY) ||
+                        snakeBody.some(part => part[0] == obstacleX && part[1] == obstacleY);
+                }
+                obstacles.push([obstacleX, obstacleY]);
+            }
+        }
+
+        // Function to handle game over
+        function endGame() {
+            alert("Game Over");
+            document.getElementById("restartBtn").style.display = "inline-block";
+        }
+
+        // Function to restart the game
+        function restartGame() {
+            // Reset variables to initial state
+            snakeX = blockSize * 5;
+            snakeY = blockSize * 5;
+            speedX = 0;
+            speedY = 0;
+            snakeBody = [];
+            gameOver = false;
+
+            // Hide the restart button
+            document.getElementById("restartBtn").style.display = "none";
+
+            // Place new food, obstacles, and restart the game
+            placeObstacles();
+            placeFood();
+        }
+    </script>
+</body>
+
+</html>
